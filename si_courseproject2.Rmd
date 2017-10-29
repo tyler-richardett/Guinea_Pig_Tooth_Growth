@@ -1,0 +1,113 @@
+---
+title: "Inferential Data Analysis (Guinea Pig Tooth Growth)"
+author: "Tyler Richardett"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Overview
+
+In this project, we investigate the impact that dosage levels and delivery methods of Vitamin C may or may not have on the growth of guinea pig teeth. The data comes from the "ToothGrowth" set in the {datasets} package in R.
+
+### Description
+
+The response is the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods (orange juice or ascorbic acid).
+
+### Format
+
+A data frame with 60 observations on 3 variables.
+
+1. len numeric Tooth length
+2. supp factor Supplement type (VC or OJ).
+3. dose numeric Dose in milligrams.
+
+### Source
+
+C. I. Bliss (1952) The Statistics of Bioassay. Academic Press.
+
+### References
+
+McNeil, D. R. (1977) Interactive Data Analysis. New York: Wiley.
+
+## Exploratory Analysis
+
+First, load the ToothGrowth dataset.
+
+```{r load.data}
+library(datasets)
+data("ToothGrowth")
+```
+
+Take a look at the dimensions.
+
+```{r data.dim}
+dim(ToothGrowth)
+```
+
+Use the ```str``` function to learn more about the variables.
+
+```{r data.str}
+str(ToothGrowth)
+```
+
+Notice that the "dose" variable is numeric, when it should be factorial. Correct this using ```as.factor```.
+
+```{r dose.factor}
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+```
+
+## Data Summary
+
+Use the ```summary``` function to learn a bit about the data.
+
+```{r data.summary}
+summary(ToothGrowth)
+```
+
+A boxplot may also provide information about how dosage and delivery method affects growth.
+
+```{r boxplot, message = FALSE, fig.height = 4}
+library(ggplot2)
+ggplot(ToothGrowth, aes(x = dose, y = len, fill = dose)) +
+        geom_boxplot() +
+        facet_grid(.~supp) +
+        labs(x = "Dosage (mg)", y = "Length (mm)") +
+        scale_fill_discrete(name = "Dosage (mg)") +
+        ggtitle("Dosage and Delivery Methods, Effects on Tooth Growth")
+```
+
+## Comparing Tooth Growth by Dosage and Delivery Methods
+
+For each of the following tests, we will use the t-distribution, as the sample size is small (less than or equal to 30).
+
+Begin with the delivery method. This will be easy to plug into the ```t.test``` function, as the "supp" variable has just two factors.
+
+```{r t.supp}
+t.supp <- t.test(len~supp, data = ToothGrowth)
+```
+
+```{r t.supp.table, echo = FALSE, results = "asis", message = FALSE}
+library(pander)
+pandoc.table(data.frame(p.value = t.supp$p.value, ci.lower = t.supp$conf.int[1], ci.upper = t.supp$conf.int[2]), justify = "left")
+```
+
+Next, test the affect of dosage on growth.
+
+```{r t.dose}
+t.dose.1 <- with(ToothGrowth, t.test(len[dose==1], len[dose==0.5]))
+t.dose.2 <- with(ToothGrowth, t.test(len[dose==2], len[dose==1]))
+```
+
+```{r t.dose.table, echo = FALSE, results = "asis", message = FALSE}
+pandoc.table(data.frame(p.value = c(t.dose.1$p.value, t.dose.2$p.value), ci.lower = c(t.dose.1$conf.int[1], t.dose.2$conf.int[1]), ci.upper = c(t.dose.1$conf.int[2], t.dose.2$conf.int[2]), row.names = c("0.5 mg vs. 1 mg", "1 mg vs. 2 mg")), justify = "left")
+```
+
+## Conclusions
+
+Using t-testing (again, because there are small sample sizes), we can draw the following conclusions with some level of certainty:
+
+1. Delivery method did not have an impact on tooth growth. The p-value was greater than .05, and the confidence interval contained zero.
+2. Dosage did have an impact on growth. As dosage increased, tooth growth was amplified. The difference between 0.5 mg and 1 mg had a greater impact than the difference between 1 mg and 2 mg. We can say this because, in both cases, the p-value was less than .05, and the confidence intervals did not contain zero.
